@@ -13,8 +13,8 @@ SSH keys need to be generated and copied to all of the nodes that OCP will be in
 Role Variables
 --------------
 
-docker_disk_name: The name of the disk that will be used for docker storage. Default is vdb
-rhsm_register: Whether to register to RHSM
-rhsm_user: User to register to RHSM
-rhsm_pass: Password to register to RHSM
-rhsm_pool: Pool ID which contains OCP subs
+* docker_disk_name: The name of the disk that will be used for docker storage. Default is vdb
+* rhsm_register: Whether to register to RHSM
+* rhsm_user: User to register to RHSM
+* rhsm_pass: Password to register to RHSM
+* rhsm_pool: Pool ID which contains OCP subs
