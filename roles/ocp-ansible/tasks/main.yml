@@ -1,0 +1,26 @@
+---
+
+- name: Install openshift-ansible-playbooks
+  yum:
+    name: openshift-ansible-playbooks
+    state: installed
+
+- name: Create Ansible host file for OpenShift Deploy
+  template:
+    dest: /etc/ansible/ocp-hosts
+    src: hosts
+    backup: yes
+
+- name: Set Ansible host_key_checking to False
+  ini_file:
+    path: /etc/ansible/ansible.cfg
+    section: defaults
+    option: host_key_checking
+    value: False
+
+- name: Configure Ansible logging
+  ini_file:
+    path: /etc/ansible/ansible.cfg
+    section: defaults
+    option: log_path
+    value: /var/log/ansible.log

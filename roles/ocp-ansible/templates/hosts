@@ -1,0 +1,145 @@
+[OSEv3:children]
+masters
+nodes
+etcd
+{% if deploy_cns %}
+glusterfs
+{% endif %}
+
+# Set variables common for all OSEv3 hosts
+[OSEv3:vars]
+# SSH user, this user should allow ssh based auth without requiring a
+# password. If using ssh key based auth, then the key should be managed by an
+# ssh agent.
+ansible_ssh_user=root
+os_firewall_use_firewalld=True
+
+# If ansible_ssh_user is not root, ansible_become must be set to true and the
+# user must be configured for passwordless sudo
+#ansible_become=yes
+
+# Debug level for all OpenShift components (Defaults to 2)
+debug_level=2
+
+# deployment
+deployment_type=openshift-enterprise
+openshift_use_system_containers=False
+openshift_release=v3.9
+containerized=true
+
+# FIX - Temporary ignore checks
+openshift_disable_check=disk_availability,memory_availability,docker_storage
+
+# Service Catalog
+
+# Enable service catalog
+openshift_enable_service_catalog=true
+
+# Enable template service broker (requires service catalog to be enabled, above)
+template_service_broker_install=true
+
+ansible_service_broker_install=false
+
+template_service_broker_selector={"role": "infra"}
+
+
+# LDAP auth
+openshift_master_identity_providers=[{'name': '', 'challenge': 'true', 'login': 'true', 'kind': 'LDAPPasswordIdentityProvider', 'attributes': {'id': ['dn'], 'email': ['mail'], 'name': ['cn'], 'preferredUsername': ['uid']}, 'bindDN': '', 'bindPassword': '', 'insecure': 'true', 'url': ''}]
+
+
+openshift_master_cluster_method=native
+openshift_master_cluster_hostname={{ ocp_cluster_vip_name }}
+openshift_master_cluster_public_hostname={{ ocp_cluster_vip_name }}
+
+openshift_master_dynamic_provisioning_enabled=true
+
+# enable ntp on masters to ensure proper failover
+openshift_clock_enabled=true
+
+# NETWORKING
+os_sdn_network_plugin_name='redhat/openshift-ovs-multitenant'
+
+# Configure master API and console ports.
+openshift_master_api_port=8443
+openshift_master_console_port=8443
+
+openshift_master_default_subdomain={{ ocp_default_domain }}
+
+osm_default_node_selector='role=apps'
+
+## ROUTER
+openshift_hosted_router_selector='role=infra'
+
+## REGISTRY
+openshift_hosted_registry_storage_kind=glusterfs
+openshift_hosted_registry_selector='role=infra'
+openshift_hosted_manage_registry=true
+openshift_hosted_registry_replicas=2
+
+## RESOURCES
+
+openshift_node_kubelet_args={'pods-per-core': ['0'], 'max-pods': ['250'], 'image-gc-high-threshold': ['65'], 'image-gc-low-threshold': ['55'], 'minimum-container-ttl-duration': ['10s'], 'system-reserved': ['cpu=200m,memory=2G']}
+
+# METRICS
+openshift_metrics_install_metrics=false
+openshift_metrics_hawkular_hostname=metrics.{{ ocp_default_domain }}
+openshift_metrics_hawkular_nodeselector={"role": "infra"}
+openshift_metrics_cassandra_nodeselector={"role": "infra"}
+openshift_metrics_heapster_nodeselector={"role": "infra"}
+{% if deploy_cns %}
+openshift_metrics_cassandra_storage_type=dynamic
+openshift_metrics_cassanda_pvc_storage_class_name=glusterfs-storage
+openshift_metrics_storage_volume_size=10Gi
+{% endif %}
+
+# LOGGING
+
+openshift_logging_install_logging=false
+openshift_logging_kibana_hostname=logging.{{ ocp_default_domain }}
+openshift_logging_es_nodeselector={"role": "infra"}
+openshift_logging_es_memory_limit=2G
+openshift_logging_kibana_nodeselector={"role": "infra"}
+openshift_logging_curator_nodeselector={"role": "infra"}
+{% if deploy_cns %}
+openshift_logging_storage_kind=dynamic
+openshift_logging_es_pvc_size=10Gi
+openshift_logging_es_pvc_dynamic=True
+{% endif %}
+
+# PROMETHEUS
+openshift_hosted_prometheus_deploy=false
+openshift_prometheus_node_selector={"role": "infra"}
+### FIXME Should not be needed when https://bugzilla.redhat.com/show_bug.cgi?id=1560916 is fixed
+openshift_prometheus_node_exporter_image_version=v3.9
+
+
+[masters]
+{% for host in groups['ocp-master'] %}
+{{ hostvars[host].inventory_hostname }}
+{% endfor %}
+
+[etcd]
+{% for host in groups['ocp-master'] %}
+{{ hostvars[host].inventory_hostname }}
+{% endfor %}
+
+[nodes]
+{% for host in groups['ocp-master'] %}
+{{ hostvars[host].inventory_hostname }} openshift_node_labels="{'role':'master'}" 
+{% endfor %}
+{% for host in groups['ocp-infra'] %}
+{{ hostvars[host].inventory_hostname }} openshift_node_labels="{'role':'infra'}" openshift_schedulable=true
+{% endfor %}
+{% for host in groups['ocp-apps'] %}
+{{ hostvars[host].inventory_hostname }} openshift_node_labels="{'role':'apps'}"
+{% endfor %}
+{% for host in groups['ocp-cns'] %}
+{{ hostvars[host].inventory_hostname }} openshift_node_labels="{'role': 'cns'}"
+{% endfor %}
+
+{% if deploy_cns %}
+[glusterfs]
+{% for host in groups['ocp-cns'] %}
+{{ hostvars[host].inventory_hostname }} glusterfs_devices='[ "/dev/{{ cns_disk_name }}" ]'
+{% endfor %}
+{% endif %}

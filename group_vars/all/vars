@@ -1,0 +1,9 @@
+docker_disk_name: vdb
+cns_disk_name: vdc
+deploy_cns: true
+ocp_default_domain: apps.example.com
+ocp_cluster_vip_name: openshift.example.com
+rhsm_register: true
+rhsm_user: 
+rhsm_pass: 
+rhsm_pool: 

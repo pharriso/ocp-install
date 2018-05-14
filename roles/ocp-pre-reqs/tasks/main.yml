@@ -1,0 +1,64 @@
+---
+
+- name: Register hosts using RHSM
+  redhat_subscription:
+    state: present
+    username: "{{ rhsm_user }}"
+    password: "{{ rhsm_pass }}"
+    pool_ids: "{{ rhsm_pool }}"
+  when: "{{ rhsm_register }}"
+
+- name: Enable RHSM Repositories
+  shell: 'subscription-manager repos --disable="*" --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-ose-3.9-rpms --enable=rhel-7-fast-datapath-rpms --enable=rhel-7-server-ansible-2.4-rpms'
+  when: "{{ rhsm_register }}"
+
+- name: Install base packages
+  yum: 
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - wget
+    - net-tools
+    - git
+    - bind-utils
+    - iptables-services
+    - bridge-utils
+    - bash-completion
+    - kexec-tools
+    - atomic
+    - atomic-openshift-utils
+
+- name: Install docker 
+  yum: 
+    name: docker 
+    state: present
+
+- name: Configure docker storage - define disks
+  lineinfile: 
+    path: /etc/sysconfig/docker-storage-setup
+    line: "{{ item }}"
+  with_items:
+    - "DEVS=/dev/{{ docker_disk_name }}"
+    - "VG=docker-vg"
+
+- name: Configure docker storage - run docker-storage-setup
+  shell:  docker-storage-setup
+  args:
+    creates: /dev/docker-vg
+
+- name: Ensure docker service is running and enabled
+  service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Install firewalld
+  yum:
+    name: firewalld
+    state: installed
+
+- name: Enable and start firewalld
+  service:
+    name: firewalld
+    state: started
+    enabled: true

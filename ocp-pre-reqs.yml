@@ -1,0 +1,5 @@
+---
+
+- hosts: ocp-master:ocp-infra:ocp-cns:ocp-apps
+  roles:
+    - ocp-pre-reqs
